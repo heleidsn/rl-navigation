@@ -22,6 +22,7 @@ from algo.cpo import Actor, Critic, SafetyBaseline
 from utils.common import *
 from utils.map import *
 from options import Options
+from std_srvs.srv import Empty
 
 args = Options().parse()
 
@@ -62,7 +63,7 @@ obstacle_padding = args.obstacle_padding
 free_padding = args.free_padding
 
 obstacle_positions = get_obstacle_positions(map_size, obstacles_map)
-obstacles_map = get_obstacles_map(map_size, obstacle_positions, map_resolution, obstacle_padding)
+obstacles_map = get_obstacles_map(map_size, obstacle_positions, map_resolution, obstacle_padding) # 得到一个201×*201的矩阵，用于表示地图上每个位置是否有障碍物
 free_map = get_obstacles_map(map_size, obstacle_positions, map_resolution, free_padding)
 
 arch = args.architecture
@@ -151,15 +152,23 @@ while(epoch <= n_epochs):
 
     map_choice = get_map_choice(map_strategy)
 
-    robot_position = get_free_position(free_map, map_resolution, map_size/2, map_choice)
+    ''' robot_position = get_free_position(free_map, map_resolution, map_size/2, map_choice)
     robot_orientation = (2*np.random.rand() - 1)*np.pi
-    environment.set_robot_pose([robot_position[0],robot_position[1],0.025], [0,0,robot_orientation])
+    environment.set_robot_pose([robot_position[0],robot_position[1],0.025], [0,0,robot_orientation]) '''
+
+    # init robot position
+    rospy.wait_for_service('reset_positions')
+    reset_pose = rospy.ServiceProxy('reset_positions', Empty)
+    try:
+        reset_pose()
+    except rospy.ServiceException:
+        print ("reset_positions service call failed")
 
     goal_position = get_free_position(free_map, map_resolution, map_size/2, map_choice)
     goal_orientation = (2*np.random.rand() - 1)*np.pi
 
-    distance_map = get_distance_map(map_size, obstacles_map, goal_position, map_resolution)
-    environment.set_distance_map(distance_map)
+    # distance_map = get_distance_map(map_size, obstacles_map, goal_position, map_resolution)
+    # environment.set_distance_map(distance_map)
     goal = [[goal_position[0],goal_position[1],0], [0,0,goal_orientation]]
     environment.set_goal(goal)
 
@@ -170,6 +179,7 @@ while(epoch <= n_epochs):
 
     experience_counter = 0
     episode_start_time = time.time()
+    reward_total = 0
 
     while(environment.is_running):
         #Run episode
@@ -183,7 +193,10 @@ while(epoch <= n_epochs):
 
         experience_counter += 1
         experience_buffer.add_experience(state, action, reward, safety_cost, next_state)
+        reward_total += reward
         state = next_state
+
+    print('episode_number: ', episode_number, 'target: ', goal_position, 'total_reward: ', reward_total)
 
     if(simulator_flag == False):
         #Compute metrics

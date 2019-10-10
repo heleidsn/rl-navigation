@@ -8,7 +8,7 @@ class Options():
         parser.add_argument('--output_name', help='Name used as base for all the output files.', type=str, default='tmp_model')
         parser.add_argument('--jump_start', help='If the training should be jump-started from IL', type=int, default=0)
         parser.add_argument('--model_init', help='Model used for initialization of the weights.', type=str)
-        parser.add_argument('--timesteps_per_epoch', help='Number of timesteps per epoch weight update.', type=int, default=60000)
+        parser.add_argument('--timesteps_per_epoch', help='Number of timesteps per epoch weight update.', type=int, default=10000)
         parser.add_argument('--n_epochs', help='Number of total training epochs.', type=int, default=1000)
         parser.add_argument('--save_weights_freq', help='Frequency of saving weights.', type=int, default=100)
 
@@ -28,7 +28,7 @@ class Options():
 
         parser.add_argument('--map_size', type=float, default=10.0, help='Uses a square map of the size specified. Size needs to be the same as one used in stage.')
         parser.add_argument('--map_resolution', type=float, default=0.1, help='Resolution of the map to be used. Used in computing the free grid-points in the map and shortest path disctance.')
-        parser.add_argument('--map_strategy', type=str, default='random-sampling', help='Choice of the map for the navigation task, \'random-sampling\' to choose a map randomly. Otherwise use \'map-1\', \'map-2\' etc to use a specific map.')
+        parser.add_argument('--map_strategy', type=str, default='map-1', help='Choice of the map for the navigation task, \'random-sampling\' to choose a map randomly. Otherwise use \'map-1\', \'map-2\' etc to use a specific map.')
         parser.add_argument('--obstacles_map', type=str, default='train_map', help='Name of the numpy file which contains the positions of obstacles.')
         parser.add_argument('--obstacle_padding', type=float, default=0.1, help='Inflate the obstacles to compute unsafe states.')
         parser.add_argument('--free_padding', type=float, default=0.3, help='Ensures relatively free positions for goal and initial robot position by large inflation of the obstacles.')
@@ -44,8 +44,8 @@ class Options():
         parser.add_argument('--max_action_count', type=int, default=300, help='Number of actions to execute before episode times out.')
         parser.add_argument('--goal_distance_tolerance', type=float, default=0.1, help='Tolerance to consider that robot has reached the goal.')
         parser.add_argument('--goal_reward', type=float, default=10.0, help='Reward received on reaching the goal.')
-        parser.add_argument('--use_path_distance_reward', type=bool, default=True, help='If true, use a reward which is computed using the shortest distance from the robot\'s current position and the goal. Reward is equal to the distance the robot gets closer to the goal in a timestep.')
-        parser.add_argument('--use_euclidean_distance_reward', type=bool, default=False, help='If true, use a reward which is computed using the euclidean distance from the robot\'s current position and the goal. Reward is equal to the distance the robot gets closer to the goal in a timestep.')
+        parser.add_argument('--use_path_distance_reward', type=bool, default=False, help='If true, use a reward which is computed using the shortest distance from the robot\'s current position and the goal. Reward is equal to the distance the robot gets closer to the goal in a timestep.')
+        parser.add_argument('--use_euclidean_distance_reward', type=bool, default=True, help='If true, use a reward which is computed using the euclidean distance from the robot\'s current position and the goal. Reward is equal to the distance the robot gets closer to the goal in a timestep.')
         parser.add_argument('--distance_reward_scaling', type=float, default=1.0, help='Scaling factor for rewards received based on distance closer to goal between consecutive time-steps.')
         parser.add_argument('--crash_reward', type=float, default=0.0, help='Additional negative reward for going into unsafe states.(Use negative reward for crashing)')
         parser.add_argument('--max_clip', type=float, default=10.0, help='Clip the maximum goal distance state and laser sensor value to this value.')

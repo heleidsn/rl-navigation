@@ -26,6 +26,7 @@ class Environment(object):
         return self.get_network_state()
 
     def get_network_state(self):
+        ''' Get laser data and pose data as state '''
         laser_data_states = self.get_laser_data_states()
         pose_data_states = self.get_pose_data_states()
         states = laser_data_states + pose_data_states
@@ -84,12 +85,14 @@ class Environment(object):
             self.path_distance_to_goal = self.distance_map[position_x_shifted_scaled, position_y_shifted_scaled]
 
     def get_pose_data_states(self):
+        ''' Get relative pose data to goal pose in polar coordinate'''
         position_data_state = do_linear_transform(get_distance(self.pose_data.position, self.goal.position), self.max_clip, self.inverse_distance_states)
         orientation_to_goal_data_state = get_relative_angle_to_goal(self.pose_data.position, self.pose_data.orientation, self.goal.position)/np.pi
         orientation_with_goal_data_state = get_relative_orientation_with_goal(self.pose_data.orientation, self.goal.orientation)/np.pi
         return [orientation_to_goal_data_state] + [position_data_state]
 
     def get_twist_data_states(self):
+        ''' Get robot velocity state as robot state '''
         trans_vel_state = (2*self.twist_data.linear.x - (self.v_lims[0] + self.v_lims[1]))/(self.v_lims[1] - self.v_lims[0])
         rot_vel_state = (2*self.twist_data.angular.z - (self.w_lims[0] + self.w_lims[1]))/(self.w_lims[1] - self.w_lims[0])
         return [trans_vel_state, rot_vel_state]
@@ -176,7 +179,7 @@ class Environment(object):
 
         while(rospy.Time.now() - action_start_time < rospy.Duration(self.action_duration)):
             if(rospy.Time.now() - action_start_time < rospy.Duration(0)): #Stage simulator crashes and restarts sometimes, the flag gets activated in that case to re-run the episode.
-                #print("Simulator crashed!!!!")
+                print("Simulator crashed!!!!")
                 flag = True
                 self.is_running = False
                 break
@@ -184,12 +187,20 @@ class Environment(object):
             if(self.stalled):
                 crashed = True
 
+        next_state = self.get_network_state()
+        laser_data = self.laser_data.ranges
+        laser_data_min = min(laser_data)
+
+        if laser_data_min < 0.1:
+            crashed = True
+
         if(crashed):
             self.crashed = True
             safety_cost += 1
             reward += self.crash_reward
+            self.is_running = False
 
-        next_state = self.get_network_state()
+        # next_state = self.get_network_state()
 
         if(self.action_count >= self.max_action_count):
             self.is_running = False
