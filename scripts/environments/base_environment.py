@@ -191,6 +191,8 @@ class Environment(object):
         laser_data = self.laser_data.ranges
         laser_data_min = min(laser_data)
 
+        
+
         if laser_data_min < 0.1:
             crashed = True
 
@@ -224,6 +226,8 @@ class Environment(object):
             reward += self.goal_reward
 
         self.euclidean_distance_to_goal = next_euclidean_distance_to_goal
+
+        # print('State:', next_state, 'laser_min:', laser_data_min, 'reward', reward, 'Pose', self.pose_data.position, 'Goal', self.goal.position)
 
         if(self.use_safety_cost):
             return next_state, reward, safety_cost, flag, not(self.is_running)
