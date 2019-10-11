@@ -29,11 +29,14 @@ def get_dir():
     date_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     log_dir = os.path.join(
         base_path,
+        'ddpg',
         "logs",
         "ddpg_stage",
         date_time,
     )
     model_dir = os.path.join(
+        base_path,
+        'ddpg'
         "models",
         "ddpg_stage",
         date_time,
@@ -70,8 +73,12 @@ def main():
     # Create ddpg model
     model = DDPG(input_dim=n_states, output_dim=2, steer_range=args.rot_vel_high, velocity_min=args.trans_vel_low, velocity_max=args.trans_vel_high)
 
+    # init logger
+    log_dir, model_dir = get_dir()
+    logger= TensorboardLog(model, log_dir)
+
     # Some training setting
-    episode = 2001
+    episode = 10000
     batch=64
     time_every_episode=40
 
@@ -126,6 +133,8 @@ def main():
             if environment.crashed:
                 done = 1
             elif environment.goal_reached:
+                done = 3
+            elif not environment.is_running:
                 done = 2
             
             # add data to experience replay.
@@ -150,12 +159,12 @@ def main():
         q_value_log = np.mean(q_values)
 
         # tensorboard update
-        # logger.update(loss, reward_sum, done, q_value_log, model.epsilon, episode)
+        logger.update(loss, reward_sum, done, q_value_log, model.epsilon, episode)
 
-        ''' # 暂存模型
+        # 暂存模型
         if episode % 20 == 0: 
             model.actor.save_weights(model_dir + '/ddpg_actor_{}.h5'.format(episode))
-            model.critic.save_weights(model_dir + '/ddpg_critic_{}.h5'.format(episode)) '''
+            model.critic.save_weights(model_dir + '/ddpg_critic_{}.h5'.format(episode))
 
         # print('Episode: {}/{} | reward: {} | loss: {:.3f}'.format(i, episode, reward_sum, loss))
         tqdm_e.set_description("Reward: {:.2f} | loss: {:.2f}".format(reward_sum, loss))
