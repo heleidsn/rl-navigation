@@ -2,7 +2,6 @@
 
 from environments.base_environment import Environment
 from geometry_msgs.msg import PoseStamped, Point, Quaternion, Twist, Pose, Pose2D
-from options import Options
 
 import numpy as np
 import os

@@ -200,7 +200,7 @@ class Environment(object):
 
         
 
-        if laser_data_min < 0.2:
+        if laser_data_min < 0.1:
             crashed = True
 
         if(crashed):
