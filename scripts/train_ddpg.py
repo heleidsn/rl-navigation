@@ -71,7 +71,7 @@ def main():
     environment.set_obstacles_map(obstacles_map, map_resolution)
 
     # Create ddpg model
-    model = DDPG(input_dim=n_states, output_dim=2, steer_range=args.rot_vel_high, velocity_min=args.trans_vel_low, velocity_max=args.trans_vel_high)
+    model = DDPG(input_dim=n_states, output_dim=2, steer_range=1, velocity_min=0.1, velocity_max=1, epsilon_min=0.2, epsilon_decay=0.98)
 
     # init logger
     log_dir, model_dir = get_dir()
@@ -84,7 +84,7 @@ def main():
     n_epochs = 1000
     episode_every_epoch = 20
     epoch = 1 
-    batch_size = 128
+    batch_size = 1000
     goal_reach_counter = 0
     crash_counter = 0
 
@@ -99,8 +99,6 @@ def main():
     while epoch <= n_epochs:
         # start a new episode
         reward_sum = 0
-        losses = [0]
-        q_values = []
         done = 0
 
         # init start point and target
@@ -124,8 +122,6 @@ def main():
         episodes_this_epoch += 1
 
         experience_counter = 0
-        episode_start_time = time.time()
-        reward_total = 0    
 
         while(environment.is_running):
             # chocie action from ε-greedy.
@@ -139,7 +135,7 @@ def main():
             # q_value = model.critic.predict([x, action])
 
             # step
-            next_state, reward, safety_cost, simulator_flag, _ = environment.execute_action(action1)
+            next_state, reward, _, simulator_flag, _ = environment.execute_action(action1)
 
             if(simulator_flag == True): #Workaround for stage simulator crashing and restarting
                 episode_number -= 1
@@ -159,8 +155,10 @@ def main():
             # add data to experience replay.
             reward_sum += reward
             model.remember(x[0], action[0], reward, next_state, done)
+            # print('Exp: {:d}  speed: {:.2f}  steer: {:.2f}  reward: {:.2f}  done: {:d}'.format(experience_counter, action1[0], action1[1], reward, done))
         
-        print('episode_number: ', episode_number, 'target: ', goal_position, 'total_reward: ', reward_sum)
+        print('episode_number: {:d} target_pos: {:.2f} {:.2f} total_reward: {:.2f}'  \
+            .format(episode_number, goal_position[0], goal_position[1], reward_sum))
             
         if simulator_flag == False:
             #Compute metrics
@@ -180,6 +178,7 @@ def main():
                 X1, X2, y = model.process_batch(batch_size)
                 # update DDPG model
                 loss = model.update_model(X1, X2, y)
+                print('Loss: ', loss)
                 # update target model
                 model.update_target_model()
 
