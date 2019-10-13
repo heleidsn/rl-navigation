@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
+
 import sys
 sys.path.insert(0, '/usr/local/lib/python2.7/dist-packages')
 
@@ -12,12 +14,12 @@ import rospkg
 
 import datetime
 
-from environments.base_environment import Environment
+from environments.ddpg_environment import Environment
 from utils.memory import ExperienceBuffer
 
 from utils.common import *
 from utils.map import *
-from options import Options
+from options.option_ddpg import Options
 from std_srvs.srv import Empty
 
 from algo.ddpg import DDPG
@@ -56,15 +58,10 @@ def main():
     free_padding = args.free_padding
 
     obstacle_positions = get_obstacle_positions(map_size, obstacles_map)
-    obstacles_map = get_obstacles_map(map_size, obstacle_positions, map_resolution, obstacle_padding) # 得到一个201×*201的矩阵，用于表示地图上每个位置是否有障碍物
+    obstacles_map = get_obstacles_map(map_size, obstacle_positions, map_resolution, obstacle_padding)
     free_map = get_obstacles_map(map_size, obstacle_positions, map_resolution, free_padding)
 
     n_states = 38
-    action_dim = 2 #Translational and rotational velocity
-    trans_vel_limits = [args.trans_vel_low, args.trans_vel_high]
-    rot_vel_limits = [args.rot_vel_low, args.rot_vel_high]
-    std_trans_init = args.std_trans_init
-    std_rot_init = args.std_rot_init
 
     # create environment
     environment = Environment(args, n_states)

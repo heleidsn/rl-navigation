@@ -21,7 +21,7 @@ from utils.memory import ExperienceBuffer
 from algo.cpo import Actor, Critic, SafetyBaseline
 from utils.common import *
 from utils.map import *
-from options import Options
+from options.option_cpo import Options
 from std_srvs.srv import Empty
 
 args = Options().parse()

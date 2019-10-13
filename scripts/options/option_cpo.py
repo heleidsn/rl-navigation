@@ -8,7 +8,7 @@ class Options():
         parser.add_argument('--output_name', help='Name used as base for all the output files.', type=str, default='tmp_model')
         parser.add_argument('--jump_start', help='If the training should be jump-started from IL', type=int, default=0)
         parser.add_argument('--model_init', help='Model used for initialization of the weights.', type=str)
-        parser.add_argument('--timesteps_per_epoch', help='Number of timesteps per epoch weight update.', type=int, default=10000)
+        parser.add_argument('--timesteps_per_epoch', help='Number of timesteps per epoch weight update.', type=int, default=60000)
         parser.add_argument('--n_epochs', help='Number of total training epochs.', type=int, default=1000)
         parser.add_argument('--save_weights_freq', help='Frequency of saving weights.', type=int, default=100)
 
