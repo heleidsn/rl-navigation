@@ -30,6 +30,7 @@ class Environment(object):
         laser_data_states = self.get_laser_data_states()
         pose_data_states = self.get_pose_data_states()
         states = laser_data_states + pose_data_states
+        # print(states)
         if(self.use_twist_data_states):
             twist_data_states = self.get_twist_data_states()
             states += twist_data_states
@@ -40,24 +41,22 @@ class Environment(object):
         self.pose_data = all_data.pose.pose
         self.twist_data = all_data.twist.twist
 
-    def create_position_subscriber(self):
-        rospy.Subscriber("/base_pose_ground_truth", Odometry, self.update_robot_state_data)
-        rospy.loginfo("Topic Subscribed: /base_pose_ground_truth")
-
     def update_robot_laser_data(self, msg):
         self.laser_data = msg
+        """ np.set_printoptions(precision=2, suppress=True)
+        laser_range = self.laser_data.ranges
+        laser_range_array = np.array(laser_range, dtype=float) """
+        # print('laser_data', laser_range_array, 'min_laser_data:', laser_range_array.min())
 
     def update_robot_stall_data(self, msg):
         self.stalled = msg.data
 
-    def get_laser_data(self):
-        return self.front_laser_data.ranges, self.rear_laser_data.ranges
-
     def get_laser_data_states(self):
-        if(self.use_min_laser_pooling):
-            laser_data_states = do_linear_transform(np.array( [min(self.laser_data.ranges[current: current+self.laser_slice]) for current in xrange(self.laser_slice_offset, len(self.laser_data.ranges) - self.laser_slice_offset, self.laser_slice)]) - self.laser_sensor_offset, self.max_clip, self.inverse_distance_states)
-        else:
-            laser_data_states = do_linear_transform(np.array(self.laser_data.ranges[self.laser_slice_offset+int(self.laser_slice/2):self.total_laser_samples - self.laser_slice_offset:self.laser_slice]) - self.laser_sensor_offset, self.max_clip, self.inverse_distance_states)
+        laser_data_raw = np.array(self.laser_data.ranges)
+        laser_split = np.hsplit(laser_data_raw, self.network_laser_inputs)
+        laser_split_min = np.array(laser_split).min(axis=1)
+        laser_data_states = do_linear_transform(np.array(laser_split_min), max_clip=self.max_clip, inverse=self.inverse_distance_states)
+        
         return list(laser_data_states)
 
     def set_distance_map(self, distance_map):
@@ -76,6 +75,13 @@ class Environment(object):
 
         self.goal_reached = False
         self.crashed = False
+
+        # set init pose data
+        start_pose = [-5, 5, 0]
+        start_orientation = quaternion_from_euler(0, 0, 0)
+        self.pose_data.position = Point(start_pose[0], start_pose[1], start_pose[2])
+        self.pose_data.orientation = Quaternion(start_orientation[0], start_orientation[1], start_orientation[2], start_orientation[3])
+        
         self.orientation_with_goal = np.absolute(get_relative_orientation_with_goal(self.pose_data.orientation, self.goal.orientation))
         self.euclidean_distance_to_goal = get_distance(self.pose_data.position, self.goal.position)
 
@@ -148,7 +154,7 @@ class Environment(object):
         self.velocity_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size = 1) ##Set queue size
         rospy.loginfo("Publisher Created: /cmd_vel")
 
-        self.pose_publisher = rospy.Publisher('/cmd_pose', Pose2D, queue_size = 1)
+        self.pose_publisher = rospy.Publisher('/cmd_pose', Pose, queue_size = 1)
         rospy.loginfo("Publisher Created: /cmd_pose")
 
         ##Added for single laser(stage)
@@ -167,8 +173,8 @@ class Environment(object):
         self.action_count += 1
         self.motion_command = Twist()
 
-        self.motion_command.linear.x = action[0]
-        self.motion_command.angular.z = action[1]
+        self.motion_command.linear.x = action[1]
+        self.motion_command.angular.z = action[0]
 
         action_start_time = rospy.Time.now()
         flag = False
@@ -188,48 +194,37 @@ class Environment(object):
                 crashed = True
 
         next_state = self.get_network_state()
-        laser_data = self.laser_data.ranges
-        laser_data_min = min(laser_data)
+        laser_data_ranges = self.laser_data.ranges
+        laser_data_min = min(laser_data_ranges)
 
-        if laser_data_min < 0.1:
+        if laser_data_min < 0.2:
             crashed = True
-
-        if(crashed):
-            self.crashed = True
-            safety_cost += 1
-            reward += self.crash_reward
-            self.is_running = False
-
-        # next_state = self.get_network_state()
-
-        if(self.action_count >= self.max_action_count):
-            self.is_running = False
 
         next_euclidean_distance_to_goal = get_distance(self.pose_data.position, self.goal.position)
 
-        if(self.use_euclidean_distance_reward):
-            reward += -self.distance_reward_scaling*(next_euclidean_distance_to_goal - self.euclidean_distance_to_goal)
+        if crashed:
+            self.crashed = True
+            reward += self.crash_reward
+            self.is_running = False
 
-        if(self.use_path_distance_reward):
-            position_x_shifted_scaled = int(np.around((self.pose_data.position.x + self.map_size)/self.resolution))
-            position_y_shifted_scaled = int(np.around((self.pose_data.position.y + self.map_size)/self.resolution))
-            next_path_distance_to_goal = self.distance_map[position_x_shifted_scaled, position_y_shifted_scaled]
-            if(next_path_distance_to_goal != np.inf and self.path_distance_to_goal != np.inf):
-                reward += -self.distance_reward_scaling*(next_path_distance_to_goal - self.path_distance_to_goal)
-            self.path_distance_to_goal = next_path_distance_to_goal
-
-        if(next_euclidean_distance_to_goal < self.goal_distance_tolerance):
+        elif next_euclidean_distance_to_goal < self.goal_distance_tolerance:
             self.goal_reached = True
             self.is_running = False
             reward += self.goal_reward
 
-        self.euclidean_distance_to_goal = next_euclidean_distance_to_goal
-
-        if(self.use_safety_cost):
-            return next_state, reward, safety_cost, flag, not(self.is_running)
+        elif self.action_count >= self.max_action_count:
+            self.is_running = False
 
         else:
-            return next_state, reward, flag, not(self.is_running)
+            reward += -self.distance_reward_scaling*(next_euclidean_distance_to_goal - self.euclidean_distance_to_goal)    
+
+        self.euclidean_distance_to_goal = next_euclidean_distance_to_goal
+
+        done = not(self.is_running)
+
+        # print(reward, done, flag)
+            
+        return next_state, reward, done, flag
 
     def get_pose(self):
         return self.pose_data

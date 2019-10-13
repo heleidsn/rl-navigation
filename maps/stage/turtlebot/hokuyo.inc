@@ -3,8 +3,8 @@ define hokuyo_common ranger
 	sensor( 			
     # laser-specific properties
     range [ 0.0  60.0 ]
-    fov 270.0
-    samples 1080
+    fov 120.0
+    samples 360
   )
   # generic model properties
   color "blue"

@@ -4,6 +4,7 @@
 import sys
 sys.path.insert(0, '/usr/local/lib/python2.7/dist-packages')
 
+
 import cPickle as pickle
 import os.path
 import time
@@ -132,7 +133,7 @@ def main():
             # q_value = model.critic.predict([x, action])
 
             # step
-            next_state, reward, _, simulator_flag, _ = environment.execute_action(action1)
+            next_state, reward, _, simulator_flag = environment.execute_action(action1)
 
             if(simulator_flag == True): #Workaround for stage simulator crashing and restarting
                 episode_number -= 1
