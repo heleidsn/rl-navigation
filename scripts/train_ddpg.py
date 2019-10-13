@@ -68,31 +68,34 @@ def main():
     environment.set_obstacles_map(obstacles_map, map_resolution)
 
     # Create ddpg model
-    model = DDPG(input_dim=n_states, output_dim=2, steer_range=args.rot_vel_high, velocity_min=args.trans_vel_low, velocity_max=args.trans_vel_high)
+    model = DDPG(input_dim=n_states, output_dim=2, steer_range=1, velocity_min=0.1, velocity_max=1, epsilon_min=0.2, epsilon_decay=0.98)
 
     # init logger
     log_dir, model_dir = get_dir()
     logger= TensorboardLog(model, log_dir)
 
-    # Some training setting
-    episode = 10000
-    batch=64
-    time_every_episode=40
-
     # map_choice
     map_choice = get_map_choice(map_strategy)
 
-    # Init tqdm
-    tqdm_e = tqdm(range(episode), desc="Reward: {:.2f} | loss: {:.2f}".format(0, 0), \
-        leave=True, unit=" episodes")
+    # Training setting
+    n_epochs = 1000
+    episode_every_epoch = 20
+    epoch = 1 
+    batch_size = 1000
+    goal_reach_counter = 0
+    crash_counter = 0
+
+    total_experiences = 0
+    episode_number = 0
+    episodes_this_epoch = 0
+
+    epoch_start_time = time.time()
 
     # Start training
     print("Start training")
-    for episode in tqdm_e:
+    while epoch <= n_epochs:
         # start a new episode
         reward_sum = 0
-        losses = [0]
-        q_values = []
         done = 0
 
         # init start point and target
@@ -112,7 +115,12 @@ def main():
         # environment reset and get the first observation
         state = environment.reset()
 
-        while not done:
+        episode_number += 1
+        episodes_this_epoch += 1
+
+        experience_counter = 0
+
+        while(environment.is_running):
             # chocie action from ε-greedy.
             x = state.reshape(-1, n_states)
 
@@ -121,11 +129,15 @@ def main():
             action1 = [action[0][1], action[0][0]]
 
             # get Q-value
-            q_value = model.critic.predict([x, action])
-            q_values.append(q_value[0])
+            # q_value = model.critic.predict([x, action])
 
-            # observation, reward, done, _ = env.step(action)
-            observation, reward, safety_cost, simulator_flag, _ = environment.execute_action(action1)
+            # step
+            next_state, reward, _, simulator_flag, _ = environment.execute_action(action1)
+
+            if(simulator_flag == True): #Workaround for stage simulator crashing and restarting
+                episode_number -= 1
+                episodes_this_epoch -= 1
+                break
 
             if environment.crashed:
                 done = 1
@@ -133,39 +145,57 @@ def main():
                 done = 3
             elif not environment.is_running:
                 done = 2
+
+            experience_counter += 1
+            state = next_state
             
             # add data to experience replay.
             reward_sum += reward
-            model.remember(x[0], action[0], reward, observation, done)
-
-            # start training once buffer > 2000
-            if len(model.memory_buffer) > 2000:
-                X1, X2, y = model.process_batch(batch)
-
+            model.remember(x[0], action[0], reward, next_state, done)
+            # print('Exp: {:d}  speed: {:.2f}  steer: {:.2f}  reward: {:.2f}  done: {:d}'.format(experience_counter, action1[0], action1[1], reward, done))
+        
+        print('episode_number: {:d} target_pos: {:.2f} {:.2f} total_reward: {:.2f}'  \
+            .format(episode_number, goal_position[0], goal_position[1], reward_sum))
+            
+        if simulator_flag == False:
+            #Compute metrics
+            goal_reach_counter += environment.goal_reached
+            crash_counter += environment.crashed
+            total_experiences += experience_counter
+            
+            # train every epoch or every 20 episode
+            if len(model.memory_buffer) > batch_size and episode_number % episode_every_epoch == 0:
+                # print epoch summary
+                print('epoch {}, Updating after {} episodes, Time for epoch {}'.format(epoch, episodes_this_epoch, (time.time() - epoch_start_time)))
+                crash_rate = float(crash_counter)/episode_every_epoch
+                success_rate = float(goal_reach_counter)/episode_every_epoch
+                print('Crash Rate: ', crash_rate)
+                print('Success Rate: ', success_rate)
+                # get batch
+                X1, X2, y = model.process_batch(batch_size)
                 # update DDPG model
                 loss = model.update_model(X1, X2, y)
+                print('Loss: ', loss)
                 # update target model
                 model.update_target_model()
-                losses.append(loss)
-                # client.simPrintLogMessage("Loss", loss, 0)
 
-        # reduce epsilon per episode
-        model.update_epsilon()
+                # tensorboard update
+                # replace done and q_value_log with crash_rate and success_rate
+                logger.update(loss, reward_sum, crash_rate, success_rate, model.epsilon, epoch)
 
-        loss = np.mean(losses)
-        q_value_log = np.mean(q_values)
+                # 暂存模型
+                if epoch % 20 == 0: 
+                    model.actor.save_weights(model_dir + '/ddpg_actor_{}.h5'.format(epoch))
+                    model.critic.save_weights(model_dir + '/ddpg_critic_{}.h5'.format(epoch))
 
-        # tensorboard update
-        logger.update(loss, reward_sum, done, q_value_log, model.epsilon, episode)
+                epoch += 1
+                epoch_start_time = time.time()
+                goal_reach_counter = 0
+                crash_counter = 0
+                episodes_this_epoch = 0
 
-        # 暂存模型
-        if episode % 20 == 0: 
-            model.actor.save_weights(model_dir + '/ddpg_actor_{}.h5'.format(episode))
-            model.critic.save_weights(model_dir + '/ddpg_critic_{}.h5'.format(episode))
-
-        # print('Episode: {}/{} | reward: {} | loss: {:.3f}'.format(i, episode, reward_sum, loss))
-        tqdm_e.set_description("Reward: {:.2f} | loss: {:.2f}".format(reward_sum, loss))
-        tqdm_e.refresh()
+                # reduce epsilon per epoch
+                model.update_epsilon()
 
     # end of training
     print("Training Finished")

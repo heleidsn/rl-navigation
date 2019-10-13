@@ -76,6 +76,13 @@ class Environment(object):
 
         self.goal_reached = False
         self.crashed = False
+
+        # set init pose data
+        start_pose = [-5, 5, 0]
+        start_orientation = quaternion_from_euler(0, 0, 0)
+        self.pose_data.position = Point(start_pose[0], start_pose[1], start_pose[2])
+        self.pose_data.orientation = Quaternion(start_orientation[0], start_orientation[1], start_orientation[2], start_orientation[3])
+
         self.orientation_with_goal = np.absolute(get_relative_orientation_with_goal(self.pose_data.orientation, self.goal.orientation))
         self.euclidean_distance_to_goal = get_distance(self.pose_data.position, self.goal.position)
 
@@ -191,7 +198,9 @@ class Environment(object):
         laser_data = self.laser_data.ranges
         laser_data_min = min(laser_data)
 
-        if laser_data_min < 0.1:
+        
+
+        if laser_data_min < 0.2:
             crashed = True
 
         if(crashed):
@@ -224,6 +233,8 @@ class Environment(object):
             reward += self.goal_reward
 
         self.euclidean_distance_to_goal = next_euclidean_distance_to_goal
+
+        # print('State:', next_state, 'laser_min:', laser_data_min, 'reward', reward, 'Pose', self.pose_data.position, 'Goal', self.goal.position)
 
         if(self.use_safety_cost):
             return next_state, reward, safety_cost, flag, not(self.is_running)

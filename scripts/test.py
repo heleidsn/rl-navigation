@@ -28,7 +28,9 @@ def main():
     c = False
     b += c
 
-    print(b)
+    str = 'test: {:.2f}'.format(10.1111)
+
+    print(str)
 
 
 if __name__ == '__main__':

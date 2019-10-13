@@ -42,7 +42,7 @@ class Options():
 
         parser.add_argument('--action_duration', type=float, default=0.2, help='Duration(in s) for execution of each action command.')
         parser.add_argument('--max_action_count', type=int, default=300, help='Number of actions to execute before episode times out.')
-        parser.add_argument('--goal_distance_tolerance', type=float, default=0.1, help='Tolerance to consider that robot has reached the goal.')
+        parser.add_argument('--goal_distance_tolerance', type=float, default=0.2, help='Tolerance to consider that robot has reached the goal.')
         parser.add_argument('--goal_reward', type=float, default=10.0, help='Reward received on reaching the goal.')
         parser.add_argument('--use_path_distance_reward', type=bool, default=False, help='If true, use a reward which is computed using the shortest distance from the robot\'s current position and the goal. Reward is equal to the distance the robot gets closer to the goal in a timestep.')
         parser.add_argument('--use_euclidean_distance_reward', type=bool, default=True, help='If true, use a reward which is computed using the euclidean distance from the robot\'s current position and the goal. Reward is equal to the distance the robot gets closer to the goal in a timestep.')

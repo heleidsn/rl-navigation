@@ -17,9 +17,9 @@ from keras.utils import plot_model
 class DDPG():
     """Deep Deterministic Policy Gradient Algorithms.
     """
-    def __init__(self, input_dim=12, output_dim=2, steer_range=math.radians(30), memory_size=40000, \
-                 TAU=0.001, gamma=0.98, epsilon=1, epsilon_decay=0.998, epsilon_min=0.4, \
-                 a_lr=0.0001, c_lr=0.0005, velocity_min=0, velocity_max=2):
+    def __init__(self, input_dim=12, output_dim=2, steer_range=math.radians(30), memory_size=60000, \
+                 TAU=0.001, gamma=0.99, epsilon=1, epsilon_decay=0.998, epsilon_min=0.2, \
+                 a_lr=0.0001, c_lr=0.001, velocity_min=0, velocity_max=1):
 
         self.sess = K.get_session()
 
@@ -86,9 +86,9 @@ class DDPG():
         """Actor model.
         """
         inputs = Input(shape=(self.input_dim,), name='state_input')
-        x = Dense(100, activation='relu')(inputs)
-        x = Dense(100, activation='relu')(x)
-        x = Dense(100, activation='relu')(x)
+        x = Dense(1000, activation='tanh')(inputs)
+        x = Dense(300, activation='tanh')(x)
+        x = Dense(100, activation='tanh')(x)
         steering = Dense(1, activation='tanh')(x)
         velocity = Dense(1, activation='sigmoid')(x)
         output = concatenate([steering, velocity])
@@ -103,10 +103,10 @@ class DDPG():
         """
         sinput = Input(shape=(self.input_dim,), name='state_input')
         ainput = Input(shape=(self.output_dim,), name='action_input')
-        s = Dense(100, activation='relu')(sinput)
-        a = Dense(100, activation='relu')(ainput)
+        s = Dense(1000, activation='tanh')(sinput)
+        a = Dense(300, activation='tanh')(ainput)
         x = concatenate([s, a])
-        x = Dense(100, activation='relu')(x)
+        x = Dense(100, activation='tanh')(x)
         output = Dense(1, activation='linear')(x)
 
         model = Model(inputs=[sinput, ainput], outputs=output)
@@ -254,7 +254,7 @@ class DDPG():
         self.target_actor.set_weights(actor_target_weights)
 
 class OrnsteinUhlenbeckActionNoise():
-    def __init__(self, mu, sigma=0.2, theta=0.15, dt=0.1, x0=None):
+    def __init__(self, mu, sigma=0.2, theta=0.15, dt=1, x0=None):
         self.theta = theta
         self.mu = mu
         self.sigma = sigma
