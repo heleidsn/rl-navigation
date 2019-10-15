@@ -77,7 +77,7 @@ class Environment(object):
         self.crashed = False
 
         # set init pose data
-        start_pose = [-5, 5, 0]
+        start_pose = [-9, 1, 0]
         start_orientation = quaternion_from_euler(0, 0, 0)
         self.pose_data.position = Point(start_pose[0], start_pose[1], start_pose[2])
         self.pose_data.orientation = Quaternion(start_orientation[0], start_orientation[1], start_orientation[2], start_orientation[3])
@@ -154,7 +154,7 @@ class Environment(object):
         self.velocity_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size = 1) ##Set queue size
         rospy.loginfo("Publisher Created: /cmd_vel")
 
-        self.pose_publisher = rospy.Publisher('/cmd_pose', Pose, queue_size = 1)
+        self.pose_publisher = rospy.Publisher('/cmd_pose', Pose2D, queue_size = 1)
         rospy.loginfo("Publisher Created: /cmd_pose")
 
         ##Added for single laser(stage)

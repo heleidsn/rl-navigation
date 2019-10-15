@@ -169,7 +169,8 @@ while(epoch <= n_epochs):
 
     # distance_map = get_distance_map(map_size, obstacles_map, goal_position, map_resolution)
     # environment.set_distance_map(distance_map)
-    goal = [[goal_position[0],goal_position[1],0], [0,0,goal_orientation]]
+    # goal = [[goal_position[0],goal_position[1],0], [0,0,goal_orientation]]
+    goal = [[-1,9,0], [0,0,0]]
     environment.set_goal(goal)
 
     state = environment.reset()

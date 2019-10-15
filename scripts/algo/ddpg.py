@@ -13,11 +13,15 @@ from keras.optimizers import Adam
 import keras.backend as K
 from keras.utils import plot_model
 
+class OU(object):
+
+    def function(self, x, mu, theta, sigma):
+        return theta * (mu - x) + sigma * np.random.randn(1)
 
 class DDPG():
     """Deep Deterministic Policy Gradient Algorithms.
     """
-    def __init__(self, input_dim=12, output_dim=2, steer_range=math.radians(30), memory_size=60000, \
+    def __init__(self, input_dim=12, output_dim=2, steer_range=math.radians(30), memory_size=100000, \
                  TAU=0.001, gamma=0.99, epsilon=1, epsilon_decay=0.998, epsilon_min=0.2, \
                  a_lr=0.0001, c_lr=0.001, velocity_min=0, velocity_max=1):
 
@@ -70,6 +74,9 @@ class DDPG():
         self.get_critic_grad = self.critic_gradient()
         self.actor_optimizer()
 
+        # Ornstein-Uhlenbeck Process
+        self.OU = OU()      
+
     def load(self, date_time, episode_num):
         """ Load model
         """
@@ -86,9 +93,8 @@ class DDPG():
         """Actor model.
         """
         inputs = Input(shape=(self.input_dim,), name='state_input')
-        x = Dense(1000, activation='tanh')(inputs)
-        x = Dense(300, activation='tanh')(x)
-        x = Dense(100, activation='tanh')(x)
+        x = Dense(300, activation='relu')(inputs)
+        x = Dense(400, activation='relu')(x)
         steering = Dense(1, activation='tanh')(x)
         velocity = Dense(1, activation='sigmoid')(x)
         output = concatenate([steering, velocity])
@@ -103,10 +109,9 @@ class DDPG():
         """
         sinput = Input(shape=(self.input_dim,), name='state_input')
         ainput = Input(shape=(self.output_dim,), name='action_input')
-        s = Dense(1000, activation='tanh')(sinput)
-        a = Dense(300, activation='tanh')(ainput)
-        x = concatenate([s, a])
-        x = Dense(100, activation='tanh')(x)
+        input_all = concatenate([sinput, ainput])
+        x = Dense(300, activation='relu')(input_all)
+        x = Dense(400, activation='relu')(x)
         output = Dense(1, activation='linear')(x)
 
         model = Model(inputs=[sinput, ainput], outputs=output)
@@ -156,9 +161,15 @@ class DDPG():
         action_original = self.actor.predict(X)
         action = np.zeros([1, self.output_dim])
         # add randomness to action selection for exploration
-        action[0][0] = np.clip(action_original[0][0]*self.steer_range + self.ou_noise1() * max(self.epsilon, 0) * 0.5, -self.steer_range, self.steer_range)
-        action[0][1] = np.clip(action_original[0][1]*self.velocity_range + self.ou_noise2() * max(self.epsilon, 0), self.velocity_min, self.velocity_max)
-      
+        # action[0][0] = np.clip(action_original[0][0]*self.steer_range + self.ou_noise1() * max(self.epsilon, 0) * 0.5, -self.steer_range, self.steer_range)
+        # action[0][1] = np.clip(action_original[0][1]*self.velocity_range + self.ou_noise2() * max(self.epsilon, 0), self.velocity_min, self.velocity_max)
+        
+        noise_t = np.zeros([1,self.output_dim])
+        noise_t[0][0] = max(self.epsilon, 0) * self.OU.function(action_original[0][0],  0.0 , 0.60, 0.30)
+        noise_t[0][1] = max(self.epsilon, 0) * self.OU.function(action_original[0][1],  0.5 , 1.00, 0.10)
+
+        action[0][0] = np.clip(action_original[0][0] + noise_t[0][0], -1, 1)
+        action[0][1] = np.clip(action_original[0][1] + noise_t[0][1], 0, 1)
         return action, action_original
 
     def remember(self, state, action, reward, next_state, done):
@@ -178,7 +189,8 @@ class DDPG():
         """update epsilon.
         """
         if self.epsilon >= self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
+            # self.epsilon *= self.epsilon_decay
+            self.epsilon -= self.epsilon_decay
 
     def process_batch(self, batch):
         """process batch data.

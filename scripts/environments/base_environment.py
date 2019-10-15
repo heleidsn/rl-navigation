@@ -54,10 +54,16 @@ class Environment(object):
         return self.front_laser_data.ranges, self.rear_laser_data.ranges
 
     def get_laser_data_states(self):
-        if(self.use_min_laser_pooling):
+        """ if(self.use_min_laser_pooling):
             laser_data_states = do_linear_transform(np.array( [min(self.laser_data.ranges[current: current+self.laser_slice]) for current in xrange(self.laser_slice_offset, len(self.laser_data.ranges) - self.laser_slice_offset, self.laser_slice)]) - self.laser_sensor_offset, self.max_clip, self.inverse_distance_states)
         else:
             laser_data_states = do_linear_transform(np.array(self.laser_data.ranges[self.laser_slice_offset+int(self.laser_slice/2):self.total_laser_samples - self.laser_slice_offset:self.laser_slice]) - self.laser_sensor_offset, self.max_clip, self.inverse_distance_states)
+         """
+        laser_data_raw = np.array(self.laser_data.ranges)
+        laser_split = np.hsplit(laser_data_raw, self.network_laser_inputs)
+        laser_split_min = np.array(laser_split).min(axis=1)
+        laser_data_states = do_linear_transform(np.array(laser_split_min), max_clip=self.max_clip, inverse=self.inverse_distance_states)
+
         return list(laser_data_states)
 
     def set_distance_map(self, distance_map):
@@ -78,7 +84,7 @@ class Environment(object):
         self.crashed = False
 
         # set init pose data
-        start_pose = [-5, 5, 0]
+        start_pose = [-9, 1, 0]
         start_orientation = quaternion_from_euler(0, 0, 0)
         self.pose_data.position = Point(start_pose[0], start_pose[1], start_pose[2])
         self.pose_data.orientation = Quaternion(start_orientation[0], start_orientation[1], start_orientation[2], start_orientation[3])
@@ -200,7 +206,7 @@ class Environment(object):
 
         
 
-        if laser_data_min < 0.1:
+        if laser_data_min < 0.2:
             crashed = True
 
         if(crashed):

@@ -12,6 +12,8 @@ class TensorboardLog():
         self.state_tensor = tf.Variable(initial_value=0, dtype=tf.float32)
         self.mean_q_tensor = tf.Variable(initial_value=0, dtype=tf.float32)
         self.epsilon_tensor = tf.Variable(initial_value=0, dtype=tf.float32)
+        self.crash_rate_tensor = tf.Variable(initial_value=0, dtype=tf.float32)
+        self.success_rate_tensor = tf.Variable(initial_value=0, dtype=tf.float32)
         
         createVar = locals()
 
@@ -54,6 +56,8 @@ class TensorboardLog():
         tf.summary.scalar("Finish State", self.state_tensor)
         tf.summary.scalar("Mean Q", self.mean_q_tensor)
         tf.summary.scalar("Epsilon", self.epsilon_tensor)
+        tf.summary.scalar("Crash rate", self.crash_rate_tensor)
+        tf.summary.scalar("Success rate", self.success_rate_tensor)
 
         
 
@@ -62,13 +66,16 @@ class TensorboardLog():
         self.writer = tf.summary.FileWriter(logdir=log_dir)
         self.writer.add_graph(self.graph)
 
-    def update(self, loss, reward_sum, done, q_value_log, epsilon, episode):
+    def update(self, loss, reward_sum, done, q_value_log, epsilon, episode, crash_rate, success_rate):
         K.get_session().run(tf.assign(self.loss_tensor, loss))
         K.get_session().run(tf.assign(self.reward_tensor, reward_sum))
         K.get_session().run(tf.assign(self.state_tensor, done))
         K.get_session().run(tf.assign(self.mean_q_tensor, q_value_log))
         K.get_session().run(tf.assign(self.epsilon_tensor, epsilon))
+        K.get_session().run(tf.assign(self.crash_rate_tensor, crash_rate))
+        K.get_session().run(tf.assign(self.success_rate_tensor, success_rate))
 
+        # update network parameters every 20 episode
         if episode % 20 == 0:
             createVar = locals()
             for layers in self.agent.actor.layers:

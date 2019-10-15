@@ -42,11 +42,9 @@ def playGame(train_indicator=1):    #1 means Train, 0 means simply Run
     EXPLORE = 100000.
     episode_count = 2000
     max_steps = 100000
-    reward = 0
     done = False
     step = 0
     epsilon = 1
-    indicator = 0
 
     #Tensorflow GPU optimization
     config = tf.ConfigProto()
@@ -86,8 +84,9 @@ def playGame(train_indicator=1):    #1 means Train, 0 means simply Run
 
     print("TORCS Experiment Start.")
     for i in range(episode_count):
-
+        # start a new episode
         print("Episode : " + str(i) + " Replay Buffer " + str(buff.count()))
+        total_reward = 0
 
         # init robot position
         rospy.wait_for_service('reset_positions')
@@ -97,22 +96,23 @@ def playGame(train_indicator=1):    #1 means Train, 0 means simply Run
         except rospy.ServiceException:
             print ("reset_positions service call failed")
 
-        goal_position = get_free_position(free_map, map_resolution, map_size/2, map_choice)
-        goal_orientation = (2*np.random.rand() - 1) * np.pi
-        goal = [[goal_position[0],goal_position[1],0], [0,0,goal_orientation]]
+        # set goal position 
+        # goal_position = get_free_position(free_map, map_resolution, map_size/2, map_choice)
+        # goal_orientation = (2*np.random.rand() - 1) * np.pi
+        # goal = [[goal_position[0],goal_position[1],0], [0,0,goal_orientation]]
+        goal = [[-1, 9, 0], [0,0,0]]
         environment.set_goal(goal)
 
         # environment reset and get the first observation
         state = environment.reset()
 
-        total_reward = 0
-
         for j in range(max_steps):
             loss = 0 
+
+            # get action with OU noise
             epsilon -= 1.0 / EXPLORE
             a_t = np.zeros([1,action_dim])
             noise_t = np.zeros([1,action_dim])
-            
             a_t_original = actor.model.predict(state.reshape(1, n_states))
             noise_t[0][0] = train_indicator * max(epsilon, 0) * OU.function(a_t_original[0][0],  0.0 , 0.60, 0.30)
             noise_t[0][1] = train_indicator * max(epsilon, 0) * OU.function(a_t_original[0][1],  0.5 , 1.00, 0.10)
@@ -120,7 +120,12 @@ def playGame(train_indicator=1):    #1 means Train, 0 means simply Run
             a_t[0][0] = np.clip(a_t_original[0][0] + noise_t[0][0], -1, 1)
             a_t[0][1] = np.clip(a_t_original[0][1] + noise_t[0][1], 0, 1)
 
+            # step
             next_state, r_t, done, simulator_flag = environment.execute_action(a_t[0])
+
+            if(simulator_flag == True): #Workaround for stage simulator crashing and restarting
+                j -= 1 
+                break
 
             buff.add(state, a_t[0], r_t, next_state, done)      #Add replay buffer
             

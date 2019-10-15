@@ -14,6 +14,8 @@ from utils.common import *
 from utils.map import *
 
 import time
+import math
+
 
 def reset_env():
     rospy.wait_for_service('/reset_positions')
@@ -42,6 +44,13 @@ def main():
     environment = Environment(args, n_states)
     environment.set_obstacles_map(obstacles_map, map_resolution)
     num = 0
+
+    reset_env()
+    
+
+
+
+
     while True:
         # next_state = environment.get_network_state()
         # print(next_state)

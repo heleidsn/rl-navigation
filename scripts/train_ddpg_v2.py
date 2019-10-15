@@ -69,22 +69,25 @@ def main():
     environment.set_obstacles_map(obstacles_map, map_resolution)
 
     # Create ddpg model
-    model = DDPG(input_dim=n_states, output_dim=2, steer_range=1, velocity_min=0.1, velocity_max=1, epsilon_min=0.2, epsilon_decay=0.98)
+    model = DDPG(input_dim=n_states, output_dim=2, steer_range=1, velocity_min=0.1, velocity_max=1, epsilon_min=0.2, epsilon_decay=0.002)
 
     # init logger
     log_dir, model_dir = get_dir()
     logger= TensorboardLog(model, log_dir)
 
     # map_choice
-    map_choice = get_map_choice(map_strategy)
+    # map_choice = get_map_choice(map_strategy)
 
     # Training setting
     n_epochs = 1000
-    episode_every_epoch = 1
+    episode_every_epoch = 20
     epoch = 1 
     batch_size = 32
     goal_reach_counter = 0
     crash_counter = 0
+    crash_rate = 1
+    success_rate = 0
+
 
     total_experiences = 0
     episode_number = 0
@@ -103,6 +106,9 @@ def main():
         episodes_this_epoch += 1
         experience_counter = 0
 
+        losses = []
+        q_values = []
+
         # init robot position
         rospy.wait_for_service('reset_positions')
         reset_pose = rospy.ServiceProxy('reset_positions', Empty)
@@ -112,9 +118,10 @@ def main():
             print ("reset_positions service call failed")
 
         # set goal position
-        goal_position = get_free_position(free_map, map_resolution, map_size/2, map_choice)
-        goal_orientation = (2*np.random.rand() - 1) * np.pi
-        goal = [[goal_position[0],goal_position[1],0], [0,0,goal_orientation]]
+        # goal_position = get_free_position(free_map, map_resolution, map_size/2, map_choice)
+        # goal_orientation = (2*np.random.rand() - 1) * np.pi
+        # goal = [[goal_position[0],goal_position[1],0], [0,0,goal_orientation]]
+        goal = [[-1, 9, 0], [0,0,0]]
         environment.set_goal(goal)
 
         # environment reset and get the first observation
@@ -126,7 +133,8 @@ def main():
             action, _ = model.get_action(x)
 
             # get Q-value
-            # q_value = model.critic.predict([x, action])
+            q_value = model.critic.predict([x, action])
+            q_values.append(q_value)
 
             # step
             next_state, reward, _, simulator_flag = environment.execute_action(action[0])
@@ -150,10 +158,26 @@ def main():
             reward_sum += reward
             model.remember(x[0], action[0], reward, next_state, done)
             # print('Exp: {:d}  speed: {:.2f}  steer: {:.2f}  reward: {:.2f}  done: {:d}'.format(experience_counter, action1[0], action1[1], reward, done))
-        
+
+            # train model online
+            if len(model.memory_buffer) > batch_size:
+                # get batch
+                X1, X2, y = model.process_batch(batch_size)
+                # update DDPG model
+                loss = model.update_model(X1, X2, y)
+                losses.append(loss)
+                # update target model
+                model.update_target_model()
+
+        # reduce epsilon per epoch
+        model.update_epsilon()
+
+        loss = np.mean(losses)
+        q_value_log = np.mean(q_values)
+
         # eposide end
-        print('episode_number: {:d} target_pos: {:.2f} {:.2f} total_reward: {:.2f}'  \
-            .format(episode_number, goal_position[0], goal_position[1], reward_sum))
+        print('episode_number: {:d} target_pos: {:.2f} {:.2f} total_reward: {:.2f}, loss: {:.2f}'  \
+            .format(episode_number, -1, 9, reward_sum, loss))
             
         if simulator_flag == False:
             #Compute metrics
@@ -161,30 +185,17 @@ def main():
             crash_counter += environment.crashed
             total_experiences += experience_counter
 
-            # Train every episode
-            if len(model.memory_buffer) > batch_size:
-                # get batch
-                X1, X2, y = model.process_batch(batch_size)
-                # update DDPG model
-                loss = model.update_model(X1, X2, y)
-                print('Loss: ', loss)
-                # update target model
-                model.update_target_model()
-
-            # update crash rate and success rate every 20 episode
-            if episode_number % 20 == 0:
+            # logger every 20 episode as a epoch
+            if episode_number % episode_every_epoch == 0:
                 # print epoch summary
                 print('epoch {}, Updating after {} episodes, Time for epoch {}'.format(epoch, episodes_this_epoch, (time.time() - epoch_start_time)))
                 crash_rate = float(crash_counter)/episode_every_epoch
                 success_rate = float(goal_reach_counter)/episode_every_epoch
                 print('Crash Rate: ', crash_rate)
                 print('Success Rate: ', success_rate)
-                
-                # tensorboard update
-                # replace done and q_value_log with crash_rate and success_rate
-                logger.update(loss, reward_sum, crash_rate, success_rate, model.epsilon, epoch)
+                print('Average loss: ', loss)
 
-                # 暂存模型
+                # save model every 20 epoch
                 model.actor.save_weights(model_dir + '/ddpg_actor_{}.h5'.format(episode_number))
                 model.critic.save_weights(model_dir + '/ddpg_critic_{}.h5'.format(episode_number))
 
@@ -194,8 +205,8 @@ def main():
                 crash_counter = 0
                 episodes_this_epoch = 0
 
-                # reduce epsilon per epoch
-                model.update_epsilon()
+            # tensorboard update
+            logger.update(loss, reward_sum, done, q_value_log, model.epsilon, episode_number, crash_rate, success_rate)
 
     # end of training
     print("Training Finished")
