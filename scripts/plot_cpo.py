@@ -66,8 +66,8 @@ def main():
     free_map = get_obstacles_map(map_size, obstacle_positions, map_resolution, free_padding)
     obstacles_map_int = obstacles_map.astype(int)
     free_map_int = free_map.astype(int)
-    np.savetxt('obstacle_map.csv', obstacles_map_int, fmt='%d', delimiter=',')
-    np.savetxt('free_map.csv', free_map_int, fmt='%d', delimiter=',')
+    """ np.savetxt('obstacle_map.csv', obstacles_map_int, fmt='%d', delimiter=',')
+    np.savetxt('free_map.csv', free_map_int, fmt='%d', delimiter=',') """
 
     arch = args.architecture
     if(arch == 'asl'):
@@ -160,9 +160,9 @@ def main():
     for i in range(x_num):
         for j in range(y_num):
             q_value_list = []
-            pos_x = float(i) / 10 - 10
-            pos_y = float(j) / 10 
-            if obstacles_map[i][j+100] == 0:
+            pos_x = i * plot_resolution - 10
+            pos_y = j * plot_resolution
+            if obstacles_map[i][int(j * plot_resolution * 10) + 100] == 0:
                 for r in range(r_num):
                     # set robot position
                     yaw = 0.2 * math.pi * r
