@@ -31,5 +31,5 @@ def plot_action():
     plt.show()
 
 if __name__ == "__main__":
-    plot_q_value_max_heatmap('goal2')
+    plot_q_value_max_heatmap('model-600')
     # plot_action()

@@ -164,7 +164,7 @@ def main():
             q_value_list = []
             pos_x = i * plot_resolution - 10
             pos_y = j * plot_resolution
-            if obstacles_map[i][int(j * plot_resolution * 10) + 100] == 0:
+            if obstacles_map[int(i * plot_resolution * 10)][int(j * plot_resolution * 10) + 100] == 0:
                 for r in range(r_num):
                     # set robot position
                     yaw = 0.2 * math.pi * r
