@@ -50,12 +50,6 @@ def main():
     os.mkdir(tensorboard_path)
     os.mkdir(diagnostics_path)
 
-    rew_disc_factor = args.rew_disc_factor
-    saf_disc_factor = args.saf_disc_factor
-    lamda = args.lamda
-    safety_lamda = args.safety_lamda
-    safety_desired_threshold = args.safety_desired_threshold
-    center_advantages = args.center_advantages
     use_safety_baseline = args.use_safety_baseline
 
     experience_batch_size = args.timesteps_per_epoch
@@ -63,7 +57,6 @@ def main():
 
     map_size = args.map_size
     map_resolution = args.map_resolution
-    map_strategy = args.map_strategy
     obstacles_map = args.obstacles_map
     obstacle_padding = args.obstacle_padding
     free_padding = args.free_padding
@@ -71,6 +64,10 @@ def main():
     obstacle_positions = get_obstacle_positions(map_size, obstacles_map)
     obstacles_map = get_obstacles_map(map_size, obstacle_positions, map_resolution, obstacle_padding) # 得到一个201×*201的矩阵，用于表示地图上每个位置是否有障碍物
     free_map = get_obstacles_map(map_size, obstacle_positions, map_resolution, free_padding)
+    obstacles_map_int = obstacles_map.astype(int)
+    free_map_int = free_map.astype(int)
+    np.savetxt('obstacle_map.csv', obstacles_map_int, fmt='%d', delimiter=',')
+    np.savetxt('free_map.csv', free_map_int, fmt='%d', delimiter=',')
 
     arch = args.architecture
     if(arch == 'asl'):
@@ -100,14 +97,6 @@ def main():
         actor_filename = '/home/heleidsn/catkin_ws/src/rl-navigation/logs/2019-10-14_15-54-16_tmp_model/weights/weights_actor700.p'
         critic_filename = '/home/heleidsn/catkin_ws/src/rl-navigation/logs/2019-10-14_15-54-16_tmp_model/weights/weights_critic700.p'
 
-    print("Training setup:")
-    print("Initializing the model from: {}".format(actor_filename))
-    print("Translational velocity limits: {}".format(trans_vel_limits))
-    print("Rotational velocity limits: {}".format(rot_vel_limits))
-    print("The universal output file name is: {}".format(args.output_name))
-    print("Timesteps per epoch: {}".format(experience_batch_size))
-    print("Number of epochs: {}".format(n_epochs))
-
     actor_desired_kl = args.actor_desired_kl
     critic_desired_kl = args.critic_desired_kl
     safety_baseline_desired_kl = args.safety_baseline_desired_kl
@@ -117,16 +106,6 @@ def main():
 
     value_estimator = Critic(n_states, critic_desired_kl, sess, arch, filename=critic_filename)
 
-    if(use_safety_baseline == True):
-        value_estimator_safety = SafetyBaseline(n_states, safety_baseline_desired_kl, sess, arch, filename=None)
-    experience_buffer = ExperienceBuffer()
-
-    total_experiences = 0
-    episode_number = 0
-    episodes_this_epoch = 0
-
-    summary_writer = tf.summary.FileWriter(tensorboard_path, sess.graph)
-    summary_dict = {'episodes_in_epoch':np.array(()), 'average_reward_sum_per_episode':np.array(()), 'average_returns':np.array(()), 'average_reward_per_experience':np.array(()), 'average_experience_per_episode':np.array(()), 'average_safety_constraint':np.array(()), 'success_rate':np.array(()), 'crash_rate':np.array(())}
     tf_ep_epoch = tf.placeholder(shape=[], dtype = tf.float32)
     tf_ep_epoch_avg_rew = tf.placeholder(shape=[], dtype = tf.float32)
     tf_ep_epoch_avg_disc_rew = tf.placeholder(shape=[], dtype = tf.float32)
@@ -161,34 +140,60 @@ def main():
         print ("reset_positions service call failed")
 
 
-    goal = [[-1,9,0], [0,0,0]]
+    goal = [[-9,9,0], [0,0,0]]
     environment.set_goal(goal)
 
 
 
     # Search for all position
-    action1 = np.zeros((9, 9, 10))
-    action2 = np.zeros((9, 9, 10))
-    q_values = np.zeros((9, 9, 10))
-    for i in range(9):
-        for j in range(9):
-            for r in range(10):
-                # set robot position
-                x = i - 9
-                y = j + 1
-                yaw = 0.2 * math.pi * r
-                environment.set_robot_pose([x, y, 0], [0, 0, yaw])
-                # get state, action and q-value
-                state = environment.reset()
-                action = policy_estimator.predict_action(np.reshape(state, (-1, n_states)))
-                q_value = value_estimator.predict_value(np.reshape(state, (-1, n_states)))
-                action1[i, j, r] = action[0]
-                action2[i, j, r] = action[1]
-                q_values[i, j, r] = q_value
+    plot_resolution = 0.2
+    x_num = int(10 / plot_resolution + 1)
+    y_num = x_num
+    r_num = 10
+    action1 = np.zeros((x_num, y_num, r_num))
+    action2 = np.zeros((x_num, y_num, r_num))
+    q_values = np.zeros((x_num, y_num, r_num))
+    q_value_max = np.zeros((x_num, y_num))
+    action1_max = np.zeros((x_num, y_num))
+    action2_max = np.zeros((x_num, y_num))
+
+    for i in range(x_num):
+        for j in range(y_num):
+            q_value_list = []
+            pos_x = float(i) / 10 - 10
+            pos_y = float(j) / 10 
+            if obstacles_map[i][j+100] == 0:
+                for r in range(r_num):
+                    # set robot position
+                    yaw = 0.2 * math.pi * r
+                    environment.set_robot_pose([pos_x, pos_y, 0], [0, 0, yaw])
+                    # get state, action and q-value
+                    state = environment.reset()
+                    print(state[1], state[-2], yaw)
+                    action = policy_estimator.predict_action(np.reshape(state, (-1, n_states)))
+                    q_value = value_estimator.predict_value(np.reshape(state, (-1, n_states)))
+                    action1[i, j, r] = action[0]
+                    action2[i, j, r] = action[1]
+                    q_values[i, j, r] = q_value
+                    q_value_list.append(q_value)
+                    if q_value == max(q_value_list):
+                        action1_max[i, j] = action[0]
+                        action2_max[i, j] = action[1]
+
+                q_value_max[i, j] = max(q_value_list)
+                print('change position')
+            else:
+                # this is a obstacle
+                q_value_max[i, j] = 0
+
+            
 
     np.save('scripts/visualization/action1.npy', action1)
     np.save('scripts/visualization/action2.npy', action2)
     np.save('scripts/visualization/q_values.npy', q_values)
+    np.save('scripts/visualization/q_value_max.npy', q_value_max)
+    np.save('scripts/visualization/action1_max.npy', action1_max)
+    np.save('scripts/visualization/action2_max.npy', action2_max)
 
     print('record finish...')
 

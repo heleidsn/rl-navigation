@@ -23,6 +23,7 @@ class Environment(object):
     def reset(self):
         self.is_running = True
         self.action_count = 0
+        rospy.sleep(0.12)
         return self.get_network_state()
 
     def get_network_state(self):

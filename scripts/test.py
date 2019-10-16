@@ -47,10 +47,6 @@ def main():
 
     reset_env()
     
-
-
-
-
     while True:
         # next_state = environment.get_network_state()
         # print(next_state)
@@ -58,10 +54,14 @@ def main():
         print(next_state)
         time.sleep(1)
 
+def test():
+    for i in range(10):
+        print(i)
 
 
 if __name__ == '__main__':
-    main()
+    #  main()
+    test()
     
 
 
