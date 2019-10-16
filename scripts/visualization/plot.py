@@ -1,30 +1,35 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import seaborn as sns
 
-q_value_max = np.load('scripts/visualization/goal1/q_value_max.npy')
-q_value_max[q_value_max==-100] = 0
+def plot_q_value_max_heatmap(data_path):
+    q_value_max = np.load('scripts/visualization/' + str(data_path) + '/q_value_max.npy')
+    q_value_max[q_value_max==-100] = 0
 
-# q_value_max = np.zeros((101, 101))
+    sns.set()
+    sns.heatmap(q_value_max.T, cmap="rainbow").invert_yaxis()
+    plt.show()
 
-""" for i in range(9):
-    for j in range(9):
-        # print(q_values[i, j])
-        q_value_max[i, j] = q_values[i, j].max()
+def plot_action():
+    action1 = np.load('scripts/visualization/goal1/action1.npy')
+    action2 = np.load('scripts/visualization/goal1/action2.npy')
+    q_values = np.load('scripts/visualization/goal1/q_values.npy')
 
+    plt.figure()
+    for i in range(10):
+        plt.subplot(2, 5, i+1)
+        sns.set()
+        sns.heatmap(action1[:, :, i].T, cmap="rainbow").invert_yaxis()
 
-numpy.savetxt("foo.csv", q_value_max, delimiter=",") """
-""" x = np.arange(0, 10.1 ,0.1)
-y = np.arange(0, 10.1, 0.1)
-x, y = np.meshgrid(x, y) """
+    plt.figure()
+    for i in range(10):
+        plt.subplot(2, 5, i+1)
+        sns.set()
+        sns.heatmap(action2[:, :, i].T, cmap="rainbow").invert_yaxis()
 
-fig = plt.figure()
-ax = Axes3D(fig)
+    plt.show()
 
-ax = plt.subplot(111, projection='3d')
-x = np.arange(0, 100, 1)
-y = np.arange(0, 100, 1)
-x, y = np.meshgrid(x, y)
-# ax.scatter(x, y, q_value_max[x, y], cmap='rainbow')
-ax.plot_surface(x, y, q_value_max[x, y], rstride=1, cstride=1, cmap='rainbow')
-plt.show()
+if __name__ == "__main__":
+    plot_q_value_max_heatmap('goal2')
+    # plot_action()
