@@ -91,11 +91,13 @@ def main():
     args.jump_start = 1
     args.model_init = '/logs/2019-10-14_15-54-16_tmp_model/weights/weights_actor700.p'
 
+    model_num = 600
+
     if args.jump_start:
         print("Jump starting the model.")
         # actor_filename = os.path.join(rospkg.RosPack().get_path("reinforcement_learning_navigation"), args.model_init)
-        actor_filename = '/home/heleidsn/catkin_ws/src/rl-navigation/logs/2019-10-14_15-54-16_tmp_model/weights/weights_actor700.p'
-        critic_filename = '/home/heleidsn/catkin_ws/src/rl-navigation/logs/2019-10-14_15-54-16_tmp_model/weights/weights_critic700.p'
+        actor_filename = '/home/heleidsn/catkin_ws/src/rl-navigation/logs_record/2019-10-14_15-54-16_tmp_model/weights/weights_actor{:d}.p'.format(model_num)
+        critic_filename = '/home/heleidsn/catkin_ws/src/rl-navigation/logs_record/2019-10-14_15-54-16_tmp_model/weights/weights_critic{:d}.p'.format(model_num)
 
     actor_desired_kl = args.actor_desired_kl
     critic_desired_kl = args.critic_desired_kl
@@ -140,7 +142,7 @@ def main():
         print ("reset_positions service call failed")
 
 
-    goal = [[-9,9,0], [0,0,0]]
+    goal = [[-1,9,0], [0,0,0]]
     environment.set_goal(goal)
 
 
@@ -187,13 +189,14 @@ def main():
                 q_value_max[i, j] = 0
 
             
-
-    np.save('scripts/visualization/action1.npy', action1)
-    np.save('scripts/visualization/action2.npy', action2)
-    np.save('scripts/visualization/q_values.npy', q_values)
-    np.save('scripts/visualization/q_value_max.npy', q_value_max)
-    np.save('scripts/visualization/action1_max.npy', action1_max)
-    np.save('scripts/visualization/action2_max.npy', action2_max)
+    save_path = 'scripts/visualization/model-{:d}'.format(model_num)
+    os.mkdir(save_path)
+    np.save(save_path + '/action1.npy', action1)
+    np.save(save_path + '/action2.npy', action2)
+    np.save(save_path + '/q_values.npy', q_values)
+    np.save(save_path + '/q_value_max.npy', q_value_max)
+    np.save(save_path + '/action1_max.npy', action1_max)
+    np.save(save_path + '/action2_max.npy', action2_max)
 
     print('record finish...')
 
