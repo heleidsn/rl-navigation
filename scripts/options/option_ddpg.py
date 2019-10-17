@@ -47,7 +47,7 @@ class Options():
         parser.add_argument('--use_path_distance_reward', type=bool, default=False, help='If true, use a reward which is computed using the shortest distance from the robot\'s current position and the goal. Reward is equal to the distance the robot gets closer to the goal in a timestep.')
         parser.add_argument('--use_euclidean_distance_reward', type=bool, default=True, help='If true, use a reward which is computed using the euclidean distance from the robot\'s current position and the goal. Reward is equal to the distance the robot gets closer to the goal in a timestep.')
         parser.add_argument('--distance_reward_scaling', type=float, default=1.0, help='Scaling factor for rewards received based on distance closer to goal between consecutive time-steps.')
-        parser.add_argument('--crash_reward', type=float, default=-10.0, help='Additional negative reward for going into unsafe states.(Use negative reward for crashing)')
+        parser.add_argument('--crash_reward', type=float, default=0, help='Additional negative reward for going into unsafe states.(Use negative reward for crashing)')
         parser.add_argument('--max_clip', type=float, default=10.0, help='Clip the maximum goal distance state and laser sensor value to this value.')
         parser.add_argument('--fov', type=float, default=180, help='Field of view to consider for the laser sensor.')
         parser.add_argument('--laser_sensor_offset', type=float, default=0.0, help='Parameter to artificially inflate the obstacles as seen by the sensor.')

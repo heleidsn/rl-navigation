@@ -55,8 +55,22 @@ def main():
         time.sleep(1)
 
 def test():
-    for i in range(10):
-        print(i)
+    list_a = [1, 2, 3]
+    list_b = [2, 3, 4]
+    for index, (a, b) in enumerate(zip(list_a, list_b)):
+        print(index, a, b)
+
+    list_aa = []
+
+    list_aa.append([1, 2])
+    list_aa.append([3, 4])
+
+    print(list_aa[0], list_aa[1])
+
+    print(max(list_aa[1]))
+
+    goal = [[-1,9,0], [0,0,0]]
+    print(goal[0][1])
 
 
 if __name__ == '__main__':
