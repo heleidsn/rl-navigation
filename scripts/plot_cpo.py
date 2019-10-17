@@ -29,7 +29,7 @@ from utils.map import *
 from options.option_cpo import Options
 from std_srvs.srv import Empty
 
-def main():
+def main(model_num=0, goal_pos=[-1, 9, 0]):
     args = Options().parse()
 
     tf.reset_default_graph()
@@ -85,24 +85,17 @@ def main():
     environment = Environment(args, n_states)
     environment.set_obstacles_map(obstacles_map, map_resolution)
 
-    actor_filename = None
-
-    # for test
-    args.jump_start = 1
-    args.model_init = '/logs/2019-10-14_15-54-16_tmp_model/weights/weights_actor700.p'
-
-    model_num = 700
-
-
-    if args.jump_start:
-        print("Jump starting the model.")
-        # actor_filename = os.path.join(rospkg.RosPack().get_path("reinforcement_learning_navigation"), args.model_init)
+    if model_num == 0:
+        actor_filename = None
+        critic_filename = None
+    else:
         actor_filename = 'logs_record/2019-10-14_15-54-16_tmp_model/weights/weights_actor{:d}.p'.format(model_num)
         critic_filename = 'logs_record/2019-10-14_15-54-16_tmp_model/weights/weights_critic{:d}.p'.format(model_num)
 
     actor_desired_kl = args.actor_desired_kl
     critic_desired_kl = args.critic_desired_kl
-    safety_baseline_desired_kl = args.safety_baseline_desired_kl
+    std_trans_init = 0
+    std_rot_init = 0
 
     policy_estimator = Actor(n_states, action_dim, [trans_vel_limits, rot_vel_limits],
                                         [np.log(std_trans_init), np.log(std_rot_init)], actor_desired_kl, sess, arch, filename=actor_filename)
@@ -142,11 +135,8 @@ def main():
     except rospy.ServiceException:
         print ("reset_positions service call failed")
 
-
-    goal = [[-1,1,0], [0,0,0]]
+    goal = [goal_pos, [0,0,0]]
     environment.set_goal(goal)
-
-
 
     # Search for all position
     plot_resolution = 0.2
@@ -190,7 +180,7 @@ def main():
                 q_value_max[i, j] = 0
 
             
-    save_path = 'scripts/visualization/model-{:d}_-1_1'.format(model_num)
+    save_path = 'scripts/visualization/model-{:d}_goal_{:d}_{:d}'.format(model_num, goal_pos[0], goal_pos[1])
     os.mkdir(save_path)
     np.save(save_path + '/action1.npy', action1)
     np.save(save_path + '/action2.npy', action2)
@@ -199,7 +189,7 @@ def main():
     np.save(save_path + '/action1_max.npy', action1_max)
     np.save(save_path + '/action2_max.npy', action2_max)
 
-    print('record finish...')
+    print('record finish for model {:d} target {:d} {:d}'.format(model_num, goal_pos[0], goal_pos[1]))
 
 
 def test():
@@ -207,5 +197,5 @@ def test():
         print(i, j)
 
 if __name__ == "__main__":
-    main()
+    main(model_num=700, goal_pos=[-1, 9, 0])
     # test()

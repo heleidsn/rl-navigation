@@ -30,6 +30,24 @@ def plot_action():
 
     plt.show()
 
+def plot_q_value_max_heatmap_multi():
+    """ plot q_value_max heatmap for all models of end point -1 9 """
+
+    plt.figure()
+    # load data
+    for i in range(8):
+        if i == 0:
+            data_path = 'scripts/visualization/model-{:d}'.format(800)
+        else:
+            data_path = 'scripts/visualization/model-{:d}'.format(i * 100)
+        q_value_max = np.load(data_path + '/q_value_max.npy')
+        plt.subplot(2, 4, i+1)
+        sns.set()
+        sns.heatmap(q_value_max.T, vmin=0, vmax=12,cmap="rainbow").invert_yaxis()
+
+    plt.show()
+
 if __name__ == "__main__":
-    plot_q_value_max_heatmap('model-600')
+    plot_q_value_max_heatmap('model-700_goal_-1_9')
     # plot_action()
+    # plot_q_value_max_heatmap_multi()
