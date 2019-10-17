@@ -1,0 +1,8 @@
+ddpg_v2 train 1000
+
+model 300 400
+
+start -9,1
+end -1, 9
+
+good results

@@ -32,17 +32,16 @@ def get_dir():
     date_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     log_dir = os.path.join(
         base_path,
-        'ddpg',
         "logs",
-        "ddpg_stage",
+        "ddpg",
         date_time,
     )
     model_dir = os.path.join(
         base_path,
-        'ddpg'
-        "models",
-        "ddpg_stage",
+        'logs',
+        'ddpg',
         date_time,
+        'models',
     )
     os.makedirs(model_dir)
     return log_dir, model_dir
