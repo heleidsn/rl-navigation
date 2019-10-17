@@ -91,7 +91,7 @@ def main():
     args.jump_start = 1
     args.model_init = '/logs/2019-10-14_15-54-16_tmp_model/weights/weights_actor700.p'
 
-    model_num = 600
+    model_num = 700
 
     if args.jump_start:
         print("Jump starting the model.")
@@ -104,7 +104,7 @@ def main():
     safety_baseline_desired_kl = args.safety_baseline_desired_kl
 
     policy_estimator = Actor(n_states, action_dim, [trans_vel_limits, rot_vel_limits],
-                                        [np.log(std_trans_init), np.log(std_rot_init)], actor_desired_kl, sess, arch, actor_filename)
+                                        [np.log(std_trans_init), np.log(std_rot_init)], actor_desired_kl, sess, arch, filename=actor_filename)
 
     value_estimator = Critic(n_states, critic_desired_kl, sess, arch, filename=critic_filename)
 
@@ -142,7 +142,7 @@ def main():
         print ("reset_positions service call failed")
 
 
-    goal = [[-1,9,0], [0,0,0]]
+    goal = [[-1,1,0], [0,0,0]]
     environment.set_goal(goal)
 
 
@@ -189,7 +189,7 @@ def main():
                 q_value_max[i, j] = 0
 
             
-    save_path = 'scripts/visualization/model-{:d}'.format(model_num)
+    save_path = 'scripts/visualization/model-{:d}_-1_1'.format(model_num)
     os.mkdir(save_path)
     np.save(save_path + '/action1.npy', action1)
     np.save(save_path + '/action2.npy', action2)
