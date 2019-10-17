@@ -69,7 +69,7 @@ def main():
     environment.set_obstacles_map(obstacles_map, map_resolution)
 
     # Create ddpg model
-    model = DDPG(input_dim=n_states, output_dim=2, steer_range=1, velocity_min=0.1, velocity_max=1, epsilon_min=0.2, epsilon_decay=0.002)
+    model = DDPG(input_dim=n_states, output_dim=2, steer_range=1, velocity_min=0, velocity_max=1, epsilon_min=0.2, epsilon_decay=0.002)
 
     # init logger
     log_dir, model_dir = get_dir()
@@ -80,7 +80,7 @@ def main():
 
     # Training setting
     n_epochs = 1000
-    episode_every_epoch = 20
+    episode_every_epoch = 50
     epoch = 1 
     batch_size = 32
     goal_reach_counter = 0

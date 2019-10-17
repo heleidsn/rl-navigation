@@ -23,6 +23,7 @@ class Environment(object):
     def reset(self):
         self.is_running = True
         self.action_count = 0
+        rospy.sleep(0.12)
         return self.get_network_state()
 
     def get_network_state(self):
@@ -194,11 +195,12 @@ class Environment(object):
                 crashed = True
 
         next_state = self.get_network_state()
+        '''
         laser_data_ranges = self.laser_data.ranges
         laser_data_min = min(laser_data_ranges)
 
         if laser_data_min < 0.2:
-            crashed = True
+            crashed = True '''
 
         next_euclidean_distance_to_goal = get_distance(self.pose_data.position, self.goal.position)
 
