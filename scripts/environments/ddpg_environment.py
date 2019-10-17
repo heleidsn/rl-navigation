@@ -186,8 +186,9 @@ class Environment(object):
                 self.is_running = False
                 break
             self.velocity_publisher.publish(self.motion_command)
-            if(self.stalled):
-                crashed = True
+        
+        if(self.stalled):
+            crashed = True
 
         next_state = self.get_network_state()
 
