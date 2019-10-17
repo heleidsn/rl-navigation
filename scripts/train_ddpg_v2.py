@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 
 import sys
@@ -96,7 +95,9 @@ def main():
 
     # Start training
     print("Start training")
+    map_choice = get_map_choice(map_strategy)
     while epoch <= n_epochs:
+
         # start a new episode
         reward_sum = 0
         done = 0
@@ -108,19 +109,16 @@ def main():
         losses = []
         q_values = []
 
-        # init robot position
-        rospy.wait_for_service('reset_positions')
-        reset_pose = rospy.ServiceProxy('reset_positions', Empty)
-        try:
-            reset_pose()
-        except rospy.ServiceException:
-            print ("reset_positions service call failed")
+        # init robot position randomly
+        robot_position = get_free_position(free_map, map_resolution, map_size/2, map_choice)
+        robot_orientation = (2*np.random.rand() - 1)*np.pi
+        environment.set_robot_pose([robot_position[0], robot_position[1], 0], [0,0,robot_orientation])
 
-        # set goal position
-        # goal_position = get_free_position(free_map, map_resolution, map_size/2, map_choice)
-        # goal_orientation = (2*np.random.rand() - 1) * np.pi
-        # goal = [[goal_position[0],goal_position[1],0], [0,0,goal_orientation]]
-        goal = [[-1, 9, 0], [0,0,0]]
+        # init goal position randomly
+        goal_position = get_free_position(free_map, map_resolution, map_size/2, map_choice)
+        goal_orientation = (2*np.random.rand() - 1)*np.pi
+        goal = [[goal_position[0],goal_position[1],0], [0,0,goal_orientation]]
+        # goal = [[-1, 9, 0], [0,0,0]]
         environment.set_goal(goal)
 
         # environment reset and get the first observation
@@ -136,7 +134,7 @@ def main():
             q_values.append(q_value)
 
             # step
-            next_state, reward, _, simulator_flag = environment.execute_action(action[0])
+            next_state, reward, _, simulator_flag, _ = environment.execute_action(action[0])
 
             if(simulator_flag == True): #Workaround for stage simulator crashing and restarting
                 episode_number -= 1
@@ -175,8 +173,8 @@ def main():
         q_value_log = np.mean(q_values)
 
         # eposide end
-        print('episode_number: {:d} target_pos: {:.2f} {:.2f} total_reward: {:.2f}, loss: {:.2f}'  \
-            .format(episode_number, -1, 9, reward_sum, loss))
+        print('episode_number: {:d} target_pos: {:.2f} {:.2f} total_reward: {:.2f}, loss: {:.2f}, done: {:d}'  \
+            .format(episode_number, goal_position[0], goal_position[1], reward_sum, loss, done))
             
         if simulator_flag == False:
             #Compute metrics
