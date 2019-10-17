@@ -202,13 +202,12 @@ class Environment(object):
                 crashed = True
 
         next_state = self.get_network_state()
-        laser_data = self.laser_data.ranges
+
+        """ laser_data = self.laser_data.ranges
         laser_data_min = min(laser_data)
 
-        
-
         if laser_data_min < 0.2:
-            crashed = True
+            crashed = True """
 
         if(crashed):
             self.crashed = True
