@@ -108,6 +108,13 @@ def main():
 
         losses = []
         q_values = []
+        rospy.wait_for_service('/reset_positions')
+        try:
+            rospy.ServiceProxy('/reset_positions', Empty)
+            print('reset success')
+            # print(val)
+        except rospy.ServiceException:
+            print('Service call failed')
 
         # init robot position randomly
         robot_position = get_free_position(free_map, map_resolution, map_size/2, map_choice)
@@ -118,11 +125,10 @@ def main():
         goal_position = get_free_position(free_map, map_resolution, map_size/2, map_choice)
         goal_orientation = (2*np.random.rand() - 1)*np.pi
         goal = [[goal_position[0],goal_position[1],0], [0,0,goal_orientation]]
-        # goal = [[-1, 9, 0], [0,0,0]]
         environment.set_goal(goal)
 
         # environment reset and get the first observation
-        state = environment.reset()
+        state = environment.reset(robot_position, goal_position)
 
         while(environment.is_running):
             # get action with OU noise
@@ -154,7 +160,7 @@ def main():
             # add data to experience replay.
             reward_sum += reward
             model.remember(x[0], action[0], reward, next_state, done)
-            # print('Exp: {:d}  speed: {:.2f}  steer: {:.2f}  reward: {:.2f}  done: {:d}'.format(experience_counter, action1[0], action1[1], reward, done))
+            print('Exp: {:d}  speed: {:.2f}  steer: {:.2f}  reward: {:.2f}  done: {:d}'.format(experience_counter, action[0][1], action[0][0], reward, done))
 
             # train model online
             if len(model.memory_buffer) > batch_size:
@@ -173,8 +179,8 @@ def main():
         q_value_log = np.mean(q_values)
 
         # eposide end
-        print('episode_number: {:d} target_pos: {:.2f} {:.2f} total_reward: {:.2f}, loss: {:.2f}, done: {:d}'  \
-            .format(episode_number, goal_position[0], goal_position[1], reward_sum, loss, done))
+        print('Episode:{:d} Start:{:.1f} {:.1f} End: {:.1f} {:.1f} reward:{:.2f} loss:{:.2f} done: {:d}'  \
+            .format(episode_number, robot_position[0], robot_position[1], goal_position[0], goal_position[1], reward_sum, loss, done))
             
         if simulator_flag == False:
             #Compute metrics

@@ -20,10 +20,19 @@ class Environment(object):
         robot_pose_data.theta = orientation[2]
         self.pose_publisher.publish(robot_pose_data)
 
-    def reset(self):
+    def reset(self, robot_position, goal_position):
         self.is_running = True
         self.action_count = 0
-        rospy.sleep(0.12)
+        pose_start = Pose()
+        pose_end = Pose()
+        pose_start.position.x = robot_position[0]
+        pose_start.position.y = robot_position[1]
+        pose_end.position.x = goal_position[0]
+        pose_end.position.y = goal_position[1]
+        self.euclidean_distance_to_goal = get_distance(pose_start.position, pose_end.position)
+        
+        ''' self.orientation_with_goal = np.absolute(get_relative_orientation_with_goal(self.pose_data.orientation, self.goal.orientation))
+        self.euclidean_distance_to_goal = get_distance(self.pose_data.position, self.goal.position) '''
         return self.get_network_state()
 
     def get_network_state(self):
@@ -72,14 +81,6 @@ class Environment(object):
         self.goal_reached = False
         self.crashed = False
 
-        # set init pose data
-        start_pose = [-9, 1, 0]
-        start_orientation = quaternion_from_euler(0, 0, 0)
-        self.pose_data.position = Point(start_pose[0], start_pose[1], start_pose[2])
-        self.pose_data.orientation = Quaternion(start_orientation[0], start_orientation[1], start_orientation[2], start_orientation[3])
-        
-        self.orientation_with_goal = np.absolute(get_relative_orientation_with_goal(self.pose_data.orientation, self.goal.orientation))
-        self.euclidean_distance_to_goal = get_distance(self.pose_data.position, self.goal.position)
 
         if(self.use_path_distance_reward):
             position_x_shifted_scaled = int(np.around((self.pose_data.position.x + self.map_size)/self.resolution))
@@ -178,15 +179,26 @@ class Environment(object):
         reward = 0
         safety_cost = 0
         crashed = False
-
-        while(rospy.Time.now() - action_start_time < rospy.Duration(self.action_duration)):
+        cmd_num = 0
+        rate = rospy.Rate(5)
+        ''' while(rospy.Time.now() - action_start_time < rospy.Duration(self.action_duration)):
             if(rospy.Time.now() - action_start_time < rospy.Duration(0)): #Stage simulator crashes and restarts sometimes, the flag gets activated in that case to re-run the episode.
                 print("Simulator crashed!!!!")
                 flag = True
                 self.is_running = False
                 break
             self.velocity_publisher.publish(self.motion_command)
+            cmd_num += 1 '''
+        if(rospy.Time.now() - action_start_time < rospy.Duration(0)): #Stage simulator crashes and restarts sometimes, the flag gets activated in that case to re-run the episode.
+            print("Simulator crashed!!!!")
+            flag = True
+            self.is_running = False
         
+        self.velocity_publisher.publish(self.motion_command)
+        # print(rospy.Time.now())
+        rate.sleep()
+
+        # print(cmd_num)
         if(self.stalled):
             crashed = True
 
