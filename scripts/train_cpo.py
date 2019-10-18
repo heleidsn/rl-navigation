@@ -160,14 +160,6 @@ except rospy.ServiceException:
 while(epoch <= n_epochs):
 
     map_choice = get_map_choice(map_strategy)
-    rospy.wait_for_service('/reset_positions')
-        try:
-            rospy.ServiceProxy('/reset_positions', Empty)
-            print('reset success')
-            # print(val)
-        except rospy.ServiceException:
-            print('Service call failed')
-
     # init robot position randomly
     robot_position = get_free_position(free_map, map_resolution, map_size/2, map_choice)
     robot_orientation = (2*np.random.rand() - 1)*np.pi

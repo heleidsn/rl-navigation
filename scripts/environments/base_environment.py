@@ -30,6 +30,14 @@ class Environment(object):
         pose_end.position.x = goal_position[0]
         pose_end.position.y = goal_position[1]
         self.euclidean_distance_to_goal = get_distance(pose_start.position, pose_end.position)
+
+        self.motion_command = Twist()
+        self.motion_command.linear.x = 0.01
+        self.motion_command.angular.z = 0
+        rate = rospy.Rate(5)
+        self.velocity_publisher.publish(self.motion_command)
+        rate.sleep()
+
         return self.get_network_state()
 
     def get_network_state(self):
