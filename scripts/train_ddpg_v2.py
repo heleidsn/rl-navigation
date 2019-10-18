@@ -161,16 +161,20 @@ def main():
             reward_sum += reward
             model.remember(x[0], action[0], reward, next_state, done)
             print('Exp: {:d}  speed: {:.2f}  steer: {:.2f}  reward: {:.2f}  done: {:d}'.format(experience_counter, action[0][1], action[0][0], reward, done))
-
-            # train model online
-            if len(model.memory_buffer) > batch_size:
-                # get batch
-                X1, X2, y = model.process_batch(batch_size)
-                # update DDPG model
-                loss = model.update_model(X1, X2, y)
-                losses.append(loss)
-                # update target model
-                model.update_target_model()
+            
+            if experience_counter == 1 and done == 1:
+                print('Error start')
+                environment.is_running = True
+            else:
+                # train model online
+                if len(model.memory_buffer) > batch_size:
+                    # get batch
+                    X1, X2, y = model.process_batch(batch_size)
+                    # update DDPG model
+                    loss = model.update_model(X1, X2, y)
+                    losses.append(loss)
+                    # update target model
+                    model.update_target_model()
 
         # reduce epsilon per epoch
         model.update_epsilon()
